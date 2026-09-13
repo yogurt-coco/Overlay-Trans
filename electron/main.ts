@@ -29,12 +29,22 @@ const isDev = !!VITE_DEV_SERVER_URL
 const TOGGLE_OVERLAY_ACCELERATOR = 'CommandOrControl+T'
 
 let win: BrowserWindow | null = null
+let overlayWin: BrowserWindow | null = null
 let tray: Tray | null = null
 /** 标记是否正在真正退出（区分「关闭到托盘」与「退出应用」） */
 let isQuitting = false
 
 function getWindowIcon() {
   return path.join(process.env.VITE_PUBLIC, 'tray-icon.png')
+}
+
+/** 统一的渲染页加载：按路由 hash 区分主窗口(设置)与悬浮窗(翻译) */
+function loadRenderer(target: BrowserWindow, route: string) {
+  if (VITE_DEV_SERVER_URL) {
+    target.loadURL(`${VITE_DEV_SERVER_URL}#${route}`)
+  } else {
+    target.loadFile(path.join(RENDERER_DIST, 'index.html'), { hash: route })
+  }
 }
 
 function createWindow() {
@@ -60,11 +70,7 @@ function createWindow() {
     win = null
   })
 
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL)
-  } else {
-    win.loadFile(path.join(RENDERER_DIST, 'index.html'))
-  }
+  loadRenderer(win, '/')
 
   // 开发模式下自动弹出窗口，便于验证 IPC 与快捷键链路；
   // 生产模式遵循产品流程：启动即后台托盘驻留，不占用主窗口。
@@ -74,7 +80,7 @@ function createWindow() {
 }
 
 function showMainWindow() {
-  if (!win) {
+  if (!win || win.isDestroyed()) {
     createWindow()
     return
   }
@@ -86,15 +92,83 @@ function hideMainWindow() {
   win?.hide()
 }
 
-/** 全局快捷键触发：推送事件给渲染进程，并唤起主窗口（P0 骨架行为） */
+/** 创建悬浮翻译窗口：无边框、置顶、可拖拽（拖拽由渲染层 CSS -webkit-app-region 实现） */
+function createOverlayWindow() {
+  overlayWin = new BrowserWindow({
+    icon: getWindowIcon(),
+    width: 420,
+    height: 280,
+    frame: false,
+    transparent: false,
+    resizable: true,
+    movable: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.mjs'),
+    },
+  })
+
+  // 提升到屏幕保护层级，确保叠加在游戏画面之上
+  overlayWin.setAlwaysOnTop(true, 'screen-saver')
+
+  // 关闭悬浮窗时仅隐藏，不销毁，便于下次快速唤起
+  overlayWin.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault()
+      overlayWin?.hide()
+    }
+  })
+
+  overlayWin.on('closed', () => {
+    overlayWin = null
+  })
+
+  loadRenderer(overlayWin, '/overlay')
+}
+
+function showOverlay() {
+  if (!overlayWin || overlayWin.isDestroyed()) {
+    createOverlayWindow()
+  }
+  overlayWin?.show()
+  overlayWin?.focus()
+}
+
+function hideOverlay() {
+  overlayWin?.hide()
+}
+
+function toggleOverlay() {
+  if (overlayWin && !overlayWin.isDestroyed() && overlayWin.isVisible()) {
+    hideOverlay()
+  } else {
+    showOverlay()
+  }
+}
+
+/** 全局快捷键触发：唤起悬浮翻译窗，并推送事件给悬浮窗渲染进程（P0：1-3 将据此读剪贴板并翻译） */
 function handleShortcutTriggered() {
   const payload: ShortcutTriggeredPayload = {
     shortcutId: 'toggle-overlay',
     accelerator: TOGGLE_OVERLAY_ACCELERATOR,
     timestamp: Date.now(),
   }
-  win?.webContents.send(IpcChannel.ShortcutTriggered, payload)
-  showMainWindow()
+  if (!overlayWin || overlayWin.isDestroyed()) {
+    createOverlayWindow()
+  }
+  if (overlayWin) {
+    // 若窗口刚创建、页面尚未就绪，等加载完成后再推送，避免事件丢失
+    if (overlayWin.webContents.isLoading()) {
+      overlayWin.webContents.once('did-finish-load', () => {
+        overlayWin?.webContents.send(IpcChannel.ShortcutTriggered, payload)
+      })
+    } else {
+      overlayWin.webContents.send(IpcChannel.ShortcutTriggered, payload)
+    }
+  }
+  showOverlay()
 }
 
 function createTray() {
@@ -104,7 +178,8 @@ function createTray() {
   tray.setToolTip('Overlay Trans')
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: '显示主窗口', click: () => showMainWindow() },
+    { label: '显示悬浮翻译窗', click: () => showOverlay() },
+    { label: '显示主窗口（设置）', click: () => showMainWindow() },
     { type: 'separator' },
     {
       label: '退出',
@@ -115,8 +190,8 @@ function createTray() {
     },
   ])
   tray.setContextMenu(contextMenu)
-  // 单击托盘图标同样唤起主窗口
-  tray.on('click', () => showMainWindow())
+  // 单击托盘图标唤起悬浮翻译窗
+  tray.on('click', () => showOverlay())
 }
 
 function registerShortcuts() {
@@ -129,6 +204,9 @@ function registerShortcuts() {
 function registerIpcHandlers() {
   ipcMain.handle(IpcChannel.WindowShow, () => showMainWindow())
   ipcMain.handle(IpcChannel.WindowHide, () => hideMainWindow())
+  ipcMain.handle(IpcChannel.OverlayShow, () => showOverlay())
+  ipcMain.handle(IpcChannel.OverlayHide, () => hideOverlay())
+  ipcMain.handle(IpcChannel.OverlayToggle, () => toggleOverlay())
   ipcMain.handle(IpcChannel.AppQuit, () => {
     isQuitting = true
     app.quit()

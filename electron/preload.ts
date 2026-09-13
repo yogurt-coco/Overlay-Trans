@@ -20,6 +20,9 @@ const overlayApi: OverlayApi = {
   },
   showMainWindow: () => ipcRenderer.invoke(IpcChannel.WindowShow),
   hideMainWindow: () => ipcRenderer.invoke(IpcChannel.WindowHide),
+  showOverlay: () => ipcRenderer.invoke(IpcChannel.OverlayShow),
+  hideOverlay: () => ipcRenderer.invoke(IpcChannel.OverlayHide),
+  toggleOverlay: () => ipcRenderer.invoke(IpcChannel.OverlayToggle),
   quitApp: () => ipcRenderer.invoke(IpcChannel.AppQuit),
   getAppVersion: () => ipcRenderer.invoke(IpcChannel.AppGetVersion),
 }

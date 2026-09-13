@@ -14,10 +14,16 @@
 export const IpcChannel = {
   /** main -> renderer：全局快捷键被触发（事件推送） */
   ShortcutTriggered: 'overlay:shortcut-triggered',
-  /** renderer -> main：显示并聚焦主窗口 */
+  /** renderer -> main：显示并聚焦主窗口（设置/历史入口） */
   WindowShow: 'window:show',
   /** renderer -> main：隐藏主窗口（驻留托盘） */
   WindowHide: 'window:hide',
+  /** renderer -> main：显示并聚焦悬浮翻译窗口 */
+  OverlayShow: 'overlay:show',
+  /** renderer -> main：隐藏悬浮翻译窗口（ESC 关闭） */
+  OverlayHide: 'overlay:hide',
+  /** renderer -> main：切换悬浮翻译窗口显示/隐藏 */
+  OverlayToggle: 'overlay:toggle',
   /** renderer -> main：退出应用 */
   AppQuit: 'app:quit',
   /** renderer -> main：读取应用版本号 */
@@ -46,10 +52,16 @@ export interface ShortcutTriggeredPayload {
 export interface OverlayApi {
   /** 订阅全局快捷键触发事件，返回取消订阅函数 */
   onShortcutTriggered: (callback: (payload: ShortcutTriggeredPayload) => void) => () => void
-  /** 显示并聚焦主窗口 */
+  /** 显示并聚焦主窗口（设置/历史入口） */
   showMainWindow: () => Promise<void>
   /** 隐藏主窗口（驻留系统托盘） */
   hideMainWindow: () => Promise<void>
+  /** 显示并聚焦悬浮翻译窗口 */
+  showOverlay: () => Promise<void>
+  /** 隐藏悬浮翻译窗口（ESC 关闭） */
+  hideOverlay: () => Promise<void>
+  /** 切换悬浮翻译窗口显示/隐藏 */
+  toggleOverlay: () => Promise<void>
   /** 退出应用 */
   quitApp: () => Promise<void>
   /** 获取应用版本号 */
