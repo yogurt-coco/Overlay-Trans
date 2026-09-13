@@ -1,0 +1,128 @@
+/* 悬浮翻译窗布局：填满无边框窗口，纵向分区 */
+.overlay-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  box-sizing: border-box;
+  background: #1e1e2e;
+  color: #e6e6e6;
+  font-size: 13px;
+  border: 1px solid #3a3a52;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 顶部标题栏：整条可拖拽移动窗口 */
+.overlay-titlebar {
+  -webkit-app-region: drag;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 30px;
+  padding: 0 8px 0 12px;
+  background: #2a2a3d;
+  border-bottom: 1px solid #3a3a52;
+  flex: 0 0 auto;
+}
+
+.overlay-title {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* 标题栏内的按钮需要显式取消拖拽，才能响应点击 */
+.overlay-close {
+  -webkit-app-region: no-drag;
+  border: none;
+  background: transparent;
+  color: #b6b6c8;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.overlay-close:hover {
+  background: #e05252;
+  color: #fff;
+}
+
+.overlay-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  min-height: 0;
+}
+
+.overlay-input,
+.overlay-result {
+  flex: 1 1 0;
+  min-height: 0;
+  resize: none;
+  border-radius: 6px;
+  border: 1px solid #3a3a52;
+  background: #16161f;
+  color: #e6e6e6;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-y: auto;
+}
+
+.overlay-input:focus {
+  outline: none;
+  border-color: #6c7bff;
+}
+
+.overlay-result {
+  background: #191926;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.overlay-placeholder {
+  color: #6b6b80;
+}
+
+.overlay-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+  padding: 0 10px 8px;
+}
+
+.overlay-actions button {
+  flex: 1 1 0;
+  padding: 5px 6px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #3a3a52;
+  background: #2a2a3d;
+  color: #e6e6e6;
+  cursor: pointer;
+}
+.overlay-actions button:hover {
+  border-color: #6c7bff;
+}
+.overlay-actions button.primary {
+  background: #4c5fd5;
+  border-color: #4c5fd5;
+  color: #fff;
+  font-weight: 600;
+}
+.overlay-actions button.primary:hover {
+  background: #5b6ee6;
+}
+
+.overlay-status {
+  flex: 0 0 auto;
+  padding: 4px 10px 8px;
+  color: #8f8fa8;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
