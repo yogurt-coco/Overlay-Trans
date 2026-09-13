@@ -1,24 +1,27 @@
 import { ipcRenderer, contextBridge } from 'electron'
+import { IpcChannel, type OverlayApi, type ShortcutTriggeredPayload } from './shared/ipc'
 
-// --------- Expose some API to the Renderer process ---------
-contextBridge.exposeInMainWorld('ipcRenderer', {
-  on(...args: Parameters<typeof ipcRenderer.on>) {
-    const [channel, listener] = args
-    return ipcRenderer.on(channel, (event, ...args) => listener(event, ...args))
+/**
+ * preload 预加载脚本
+ *
+ * 仅通过 contextBridge 把主进程的系统胶水能力，安全地暴露给渲染进程。
+ * 不在这里写任何翻译业务逻辑；所有业务由渲染进程 React/TS 承担。
+ */
+const overlayApi: OverlayApi = {
+  onShortcutTriggered: (callback: (payload: ShortcutTriggeredPayload) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: ShortcutTriggeredPayload) => {
+      callback(payload)
+    }
+    ipcRenderer.on(IpcChannel.ShortcutTriggered, listener)
+    // 返回取消订阅函数，便于 React useEffect 清理
+    return () => {
+      ipcRenderer.removeListener(IpcChannel.ShortcutTriggered, listener)
+    }
   },
-  off(...args: Parameters<typeof ipcRenderer.off>) {
-    const [channel, ...omit] = args
-    return ipcRenderer.off(channel, ...omit)
-  },
-  send(...args: Parameters<typeof ipcRenderer.send>) {
-    const [channel, ...omit] = args
-    return ipcRenderer.send(channel, ...omit)
-  },
-  invoke(...args: Parameters<typeof ipcRenderer.invoke>) {
-    const [channel, ...omit] = args
-    return ipcRenderer.invoke(channel, ...omit)
-  },
+  showMainWindow: () => ipcRenderer.invoke(IpcChannel.WindowShow),
+  hideMainWindow: () => ipcRenderer.invoke(IpcChannel.WindowHide),
+  quitApp: () => ipcRenderer.invoke(IpcChannel.AppQuit),
+  getAppVersion: () => ipcRenderer.invoke(IpcChannel.AppGetVersion),
+}
 
-  // You can expose other APTs you need here.
-  // ...
-})
+contextBridge.exposeInMainWorld('overlayAPI', overlayApi)

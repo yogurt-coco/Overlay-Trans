@@ -23,5 +23,6 @@ declare namespace NodeJS {
 
 // Used in Renderer process, expose in `preload.ts`
 interface Window {
-  ipcRenderer: import('electron').IpcRenderer
+  /** preload 通过 contextBridge 暴露的系统胶水能力（类型见 electron/shared/ipc.ts） */
+  overlayAPI: import('./shared/ipc').OverlayApi
 }
