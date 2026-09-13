@@ -36,7 +36,7 @@
 
 .field {
   display: grid;
-  grid-template-columns: 160px 1fr;
+  grid-template-columns: 190px 1fr;
   align-items: center;
   gap: 12px;
   margin-bottom: 12px;
@@ -45,6 +45,14 @@
 .field > span {
   color: #b6b6c8;
   font-size: 0.92em;
+  line-height: 1.25;
+}
+
+/* 字段标签的英文副标题 / English sub-label of a field */
+.field > span small {
+  display: block;
+  color: #82829a;
+  font-size: 0.85em;
 }
 
 .field input,
